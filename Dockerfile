@@ -16,9 +16,10 @@ RUN pip3 install --no-cache-dir -U pip && \
     pip3 install --no-cache-dir -U -r requirements.txt
 
 # Setup application
-RUN mkdir /VJ-FILTER-BOT
-WORKDIR /VJ-FILTER-BOT
-COPY . /VJ-FILTER-BOT
+RUN mkdir /Beat-FILTER-BOT
+WORKDIR /Beat-FILTER-BOT
+COPY . /Beat-FILTER-BOT
 
 CMD ["python", "bot.py"]
+
 
