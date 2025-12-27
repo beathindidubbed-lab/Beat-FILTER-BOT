@@ -18,18 +18,20 @@ CMD ["python", "bot.py"]
 '''
 FROM python:3.10.8-slim-bullseye
 
-WORKDIR /app
-
+# Install system dependencies
 RUN apt-get update && apt-get upgrade -y && \
-    apt-get install -y --no-install-recommends \
-    git \
-    ffmpeg \
-    && apt-get clean \
-    && rm -rf /var/lib/apt/lists/*
+    apt-get install -y --no-install-recommends git ffmpeg && \
+    apt-get clean && \
+    rm -rf /var/lib/apt/lists/*
 
-COPY requirements.txt /app/requirements.txt
-RUN pip3 install --no-cache-dir -r requirements.txt
+# Install Python dependencies
+COPY requirements.txt /requirements.txt
+RUN pip3 install --no-cache-dir -U pip && \
+    pip3 install --no-cache-dir -U -r requirements.txt
 
-COPY . /app
+# Setup application
+RUN mkdir /VJ-FILTER-BOT
+WORKDIR /VJ-FILTER-BOT
+COPY . /VJ-FILTER-BOT
 
-CMD ["python3", "bot.py"]
+CMD ["python", "bot.py"]
