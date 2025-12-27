@@ -1,7 +1,7 @@
 # Don't Remove Credit @VJ_Bots
 # Subscribe YouTube Channel For Amazing Bot @Tech_VJ
 # Ask Doubt on telegram @KingVJ01
-
+'''
 FROM python:3.10.8-slim-buster
 
 RUN apt update && apt upgrade -y
@@ -15,3 +15,21 @@ WORKDIR /VJ-FILTER-BOT
 COPY . /VJ-FILTER-BOT
 CMD ["python", "bot.py"]
 
+'''
+FROM python:3.10.8-slim-bullseye
+
+WORKDIR /app
+
+RUN apt-get update && apt-get upgrade -y && \
+    apt-get install -y --no-install-recommends \
+    git \
+    ffmpeg \
+    && apt-get clean \
+    && rm -rf /var/lib/apt/lists/*
+
+COPY requirements.txt /app/requirements.txt
+RUN pip3 install --no-cache-dir -r requirements.txt
+
+COPY . /app
+
+CMD ["python3", "bot.py"]
