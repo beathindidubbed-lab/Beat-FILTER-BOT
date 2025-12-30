@@ -1,100 +1,225 @@
-# Don't Remove Credit @VJ_Bots
-# Subscribe YouTube Channel For Amazing Bot @Tech_VJ
-# Ask Doubt on telegram @KingVJ01
+"""
+Advanced Auto Filter Bot V3
+FIXED - Plugins will load properly with manual import system
+"""
 
-# Clone Code Credit : YT - @Tech_VJ / TG - @VJ_Bots / GitHub - @VJBots
-
-import sys, glob, importlib, logging, logging.config, pytz, asyncio
+import sys
+import glob
+import importlib
+import logging
+import asyncio
 from pathlib import Path
-
-# Get logging configurations
-logging.config.fileConfig('logging.conf')
-logging.getLogger().setLevel(logging.INFO)
-logging.getLogger("pyrogram").setLevel(logging.ERROR)
-logging.getLogger("cinemagoer").setLevel(logging.ERROR)
-
 from pyrogram import Client, idle
-from database.users_chats_db import db
-from info import *
-from utils import temp
-from typing import Union, Optional, AsyncGenerator
-from Script import script 
-from datetime import date, datetime 
-from aiohttp import web
-from plugins import web_server
-from plugins.clone import restart_bots
+from pyrogram.enums import ParseMode
 
-from TechVJ.bot import TechVJBot
-from TechVJ.util.keepalive import ping_server
-from TechVJ.bot.clients import initialize_clients
+# CRITICAL: Import pyromod for listen() functionality
+try:
+    from pyromod import listen
+except ImportError:
+    print("ERROR: pyromod not installed!")
+    print("Install it: pip install pyromod")
+    sys.exit(1)
 
-ppath = "plugins/*.py"
-files = glob.glob(ppath)
-TechVJBot.start()
-loop = asyncio.get_event_loop()
+ascii_art = """
+██████╗░███████╗░█████╗░████████╗░░░█████╗░███╗░░██╗██╗███╗░░░███╗███████╗
+██╔══██╗██╔════╝██╔══██╗╚══██╔══╝░░██╔══██╗████╗░██║██║████╗░████║██╔════╝
+██████╦╝█████╗░░███████║░░░██║░░░░░███████║██╔██╗██║██║██╔████╔██║█████╗░░
+██╔══██╗██╔══╝░░██╔══██║░░░██║░░░░░██╔══██║██║╚████║██║██║╚██╔╝██║██╔══╝░░
+██████╦╝███████╗██║░░██║░░░██║░░░░░██║░░██║██║░╚███║██║██║░╚═╝░██║███████╗
+╚═════╝░╚══════╝╚═╝░░╚═╝░░░╚═╝░░░░░╚═╝░░╚═╝╚═╝░░╚══╝╚═╝╚═╝░░░░░╚═╝╚══════╝
+"""
+
+# Setup logging
+logging.basicConfig(
+    level=logging.INFO,
+    format="[%(asctime)s - %(levelname)s] - %(name)s - %(message)s",
+    datefmt='%d-%b-%y %H:%M:%S'
+)
+logging.getLogger("pyrogram").setLevel(logging.WARNING)
+LOGGER = logging.getLogger(__name__)
 
 
-async def start():
-    print('\n')
-    print('Initalizing Your Bot')
-    bot_info = await TechVJBot.get_me()
-    await initialize_clients()
-    for name in files:
-        with open(name) as a:
-            patt = Path(a.name)
-            plugin_name = patt.stem.replace(".py", "")
-            plugins_dir = Path(f"plugins/{plugin_name}.py")
-            import_path = "plugins.{}".format(plugin_name)
-            spec = importlib.util.spec_from_file_location(import_path, plugins_dir)
-            load = importlib.util.module_from_spec(spec)
-            spec.loader.exec_module(load)
-            sys.modules["plugins." + plugin_name] = load
-            print("Tech VJ Imported => " + plugin_name)
-    if ON_HEROKU:
-        asyncio.create_task(ping_server())
-    b_users, b_chats = await db.get_banned()
-    temp.BANNED_USERS = b_users
-    temp.BANNED_CHATS = b_chats
-    me = await TechVJBot.get_me()
-    temp.BOT = TechVJBot
-    temp.ME = me.id
-    temp.U_NAME = me.username
-    temp.B_NAME = me.first_name
-    logging.info(script.LOGO)
-    tz = pytz.timezone('Asia/Kolkata')
-    today = date.today()
-    now = datetime.now(tz)
-    time = now.strftime("%H:%M:%S %p")
-    try:
-        await TechVJBot.send_message(chat_id=LOG_CHANNEL, text=script.RESTART_TXT.format(today, time))
-    except:
-        print("Make Your Bot Admin In Log Channel With Full Rights")
-    for ch in CHANNELS:
+class Bot(Client):
+    def __init__(self):
+        from config import API_ID, API_HASH, BOT_TOKEN, WORKERS
+        
+        super().__init__(
+            name="AdvanceAutoFilterBot",
+            api_id=API_ID,
+            api_hash=API_HASH,
+            bot_token=BOT_TOKEN,
+            workers=WORKERS,
+            parse_mode=ParseMode.HTML,
+            plugins=None  # We'll load manually
+        )
+        self.LOGGER = LOGGER
+
+    async def start(self):
+        from config import LOG_CHANNEL, CHANNELS, FORCE_SUB_CHANNELS
+        
+        await super().start()
+        
+        me = await self.get_me()
+        self.username = me.username
+        self.id = me.id
+        self.mention = me.mention
+        self.first_name = me.first_name
+        
+        LOGGER.info(f"✅ Bot Started as @{me.username}")
+        
+        # Connect to database
         try:
-            k = await TechVJBot.send_message(chat_id=ch, text="**Bot Restarted**")
-            await k.delete()
-        except:
-            print("Make Your Bot Admin In File Channels With Full Rights")
-    try:
-        k = await TechVJBot.send_message(chat_id=AUTH_CHANNEL, text="**Bot Restarted**")
-        await k.delete()
-    except:
-        print("Make Your Bot Admin In Force Subscribe Channel With Full Rights")
-    if CLONE_MODE == True:
-        print("Restarting All Clone Bots.......")
-        await restart_bots()
-        print("Restarted All Clone Bots.")
-    app = web.AppRunner(await web_server())
-    await app.setup()
-    bind_address = "0.0.0.0"
-    await web.TCPSite(app, bind_address, PORT).start()
-    await idle()
+            from database.database import Database
+            self.db = Database()
+            await self.db.connect()
+            LOGGER.info("✅ Database Connected")
+        except Exception as e:
+            LOGGER.error(f"❌ Database Error: {e}")
+            self.db = None
+        
+        # Setup channels
+        if CHANNELS:
+            LOGGER.info(f"📁 File Channels Configured: {len(CHANNELS)}")
+            self.db_channel_id = CHANNELS[0]
+            
+            # Get channel details
+            try:
+                await self.get_db_channel()
+            except Exception as e:
+                LOGGER.error(f"❌ Error getting channel: {e}")
+        else:
+            LOGGER.warning("⚠️ No file channels configured!")
+            self.db_channel_id = None
+        
+        if FORCE_SUB_CHANNELS:
+            LOGGER.info(f"📢 Force-Sub Channels: {len(FORCE_SUB_CHANNELS)}")
+        
+        # Send log message
+        if LOG_CHANNEL and LOG_CHANNEL != 0:
+            try:
+                await self.send_message(
+                    LOG_CHANNEL,
+                    f"<b>🤖 Bot Started!</b>\n\n"
+                    f"<b>Bot:</b> @{me.username}\n"
+                    f"<b>Status:</b> ✅ Online"
+                )
+                LOGGER.info("✅ Log channel notified")
+            except Exception as e:
+                LOGGER.warning(f"⚠️ Log channel error: {e}")
+        
+        # Load plugins manually
+        await self.load_plugins()
+        
+        LOGGER.info("")
+        LOGGER.info("=" * 50)
+        LOGGER.info("🔥 BOT IS READY!")
+        LOGGER.info(f"   Bot: @{me.username}")
+        LOGGER.info(f"   Database: {'✅' if self.db else '❌'}")
+        LOGGER.info(f"   Plugins: ✅ Loaded")
+        LOGGER.info("=" * 50)
+        LOGGER.info("")
+    
+    async def load_plugins(self):
+        """Load all plugins manually"""
+        LOGGER.info("📦 Loading plugins...")
+        
+        plugins_dir = Path("plugins")
+        
+        if not plugins_dir.exists():
+            LOGGER.error("❌ Plugins directory not found!")
+            return
+        
+        # Get all Python files in plugins directory
+        plugin_files = list(plugins_dir.glob("*.py"))
+        
+        if not plugin_files:
+            LOGGER.warning("⚠️ No plugin files found!")
+            return
+        
+        loaded = 0
+        failed = 0
+        
+        for plugin_file in plugin_files:
+            plugin_name = plugin_file.stem
+            
+            # Skip __init__.py
+            if plugin_name.startswith("__"):
+                continue
+            
+            try:
+                # Import the plugin module
+                import_path = f"plugins.{plugin_name}"
+                
+                # Check if already imported
+                if import_path in sys.modules:
+                    # Reload if already imported
+                    importlib.reload(sys.modules[import_path])
+                else:
+                    # Import for first time
+                    spec = importlib.util.spec_from_file_location(
+                        import_path,
+                        plugin_file
+                    )
+                    module = importlib.util.module_from_spec(spec)
+                    sys.modules[import_path] = module
+                    spec.loader.exec_module(module)
+                
+                LOGGER.info(f"   ✅ Loaded: {plugin_name}")
+                loaded += 1
+                
+            except Exception as e:
+                LOGGER.error(f"   ❌ Failed: {plugin_name} - {e}")
+                failed += 1
+        
+        LOGGER.info(f"📦 Plugins loaded: {loaded} ✅ | {failed} ❌")
+    
+    async def get_db_channel(self):
+        """Get database channel details"""
+        if hasattr(self, 'db_channel'):
+            return self.db_channel
+        
+        if not self.db_channel_id:
+            LOGGER.error("❌ No database channel!")
+            return None
+        
+        try:
+            self.db_channel = await self.get_chat(self.db_channel_id)
+            LOGGER.info(f"✅ Channel: {self.db_channel.title}")
+            return self.db_channel
+        except Exception as e:
+            LOGGER.error(f"❌ Channel error: {e}")
+            return None
+
+    async def stop(self, *args):
+        await super().stop()
+        LOGGER.info("❌ Bot Stopped!")
 
 
-if __name__ == '__main__':
+# Create bot instance
+bot = Bot()
+
+
+async def start_bot():
+    """Start the bot"""
+    print(ascii_art)
+    LOGGER.info("🚀 Starting bot...")
+    
     try:
-        loop.run_until_complete(start())
+        await bot.start()
+        LOGGER.info("🔥 Bot is running...")
+        await idle()
     except KeyboardInterrupt:
-        logging.info('Service Stopped Bye 👋')
+        LOGGER.info("⚠️ Keyboard interrupt received")
+    except Exception as e:
+        LOGGER.error(f"❌ Error: {e}")
+    finally:
+        await bot.stop()
 
 
+if __name__ == "__main__":
+    try:
+        asyncio.run(start_bot())
+    except KeyboardInterrupt:
+        LOGGER.info("👋 Stopped by user")
+    except Exception as e:
+        LOGGER.error(f"❌ Fatal error: {e}")
