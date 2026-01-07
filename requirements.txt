@@ -1,6 +1,7 @@
 
 #trying for railway
 
+pyromod
 pyrofork==2.3.45
 tgcrypto 
 requests 
@@ -40,5 +41,6 @@ psutil==5.9.4
 dnspython==2.3.0
 openai==0.25.0
 git+https://github.com/Joelkb/cinemagoer
+
 
 
